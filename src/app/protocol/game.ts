@@ -91,13 +91,6 @@ export interface NextRound extends Packet {
 
 // Special packets
 
-export interface EndGameAck {
-    type: "special_end_game",
-    players: PlayerObject[],
-}
-
-export interface PlayerLeft {
-    type: "special_player_left",
-    player: string,
-    newHost?: string,
+export interface EndGame extends Packet {
+    type: "end_game",
 }

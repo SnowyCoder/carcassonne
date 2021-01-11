@@ -1,13 +1,11 @@
-# Carcassonne
-Carcassone board-game brought online.
+# Snowy's Carcassonne
+Fork of Carcassonne that enables primitive multiplayer with no server.
+Carcassonne board-game brought online.
 
-If you don't know what carcassonne is, visit us at [carcassonne.xyz](https://carcassonne.xyz) (and remember to bring friends!).
+If you don't know what carcassonne is, visit us [here](https://rossilorenzo.tk/carcassonne) (and remember to bring friends!).
 
 ### How do I host it?
-This is only the client code, the server code is hosted [here](https://gtihub.com/upperlevel/carcassonne-server).
-
-In our production server a nginx webserver hosts the files and routes websocket requests to carcasssonne-server.
-To select where you want your websocket to connect you can edit configurations in your .env file.
+Github pages kindly hosts the static page, and a peerjs server handles the matchmaking.
 
 ### Why did you create it?
 In our lonely quarantine days we wanted to play with our friends but we found no game like carcassonne available
@@ -26,7 +24,7 @@ ca be easily read by the server.
 In future versions we plan to use WebRTC to distribute the gameplay load.
 
 ### Game Logic
-The client handles all of the game logic, the server only knows what's the avatar like.
+The client handles all of the game logic.
 This has been designed to ease client implementation and to support multiple game protocols when needed.
 
 ### Thanks

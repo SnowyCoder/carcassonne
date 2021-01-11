@@ -5,8 +5,6 @@ import LoginComponent from "../ui/login/login.vue";
 import {RoomPhase} from "./roomPhase";
 
 export class LoginPhase extends Phase {
-    myId: string;
-
     form: any;
 
     constructor() {
@@ -32,61 +30,29 @@ export class LoginPhase extends Phase {
     }
 
     requestLogin(details: PlayerObject) {
-        channel.eventEmitter.once("login_response", (packet: LoginResponse) => {
-            if (packet.result !== "ok") {
-                this.form.errorMessage = packet.result;
-                return;
-            }
-            this.myId = packet.playerId;
-            this.onLogin();
-        });
-        channel.send({
-            type: "login",
-            details: details
-        } as Login);
-    }
-
-    onLogin() {
-        if (window.location.hash) {
-            const roomId = window.location.hash.substr(1);
-            this.joinRoom(roomId);
+        if (channel.isMaster) {
+            details.id = channel.peer.id;
+            details.isHost = true;
+            this.goToRoom([details])
         } else {
-            this.createRoom();
+            channel.eventEmitter.once("login_response", (packet: LoginResponse) => {
+                if (packet.result !== "ok") {
+                    this.form.errorMessage = packet.result;
+                    return;
+                }
+                this.goToRoom(packet.players);
+            });
+            channel.send({
+                type: "login",
+                details: details
+            } as Login);
         }
     }
 
-    joinRoom(roomId: string) {
-        channel.eventEmitter.once("room_join_response", (packet: RoomJoinResponse) => {
-            if (packet.result !== "ok") {
-                this.form.errorMessage = packet.result;
-                return;
-            }
-            this.goToRoom(roomId, packet.players);
-        });
-        channel.send({
-            type: "room_join",
-            inviteId: roomId,
-        } as RoomJoin)
-    }
-
-    createRoom() {
-        channel.eventEmitter.once("room_create_response", (packet: RoomCreateResponse) => {
-            if (packet.result !== "ok") {
-                this.form.errorMessage = packet.result;
-                return;
-            }
-
-            const roomId = packet.inviteId;
-            window.location.hash = "#" + roomId;
-            this.goToRoom(roomId, packet.players);
-        });
-        channel.send({
-            type: "room_create",
-        } as RoomCreate);
-    }
-
-    goToRoom(roomId: string, players: PlayerObject[]) {
-        const me = players.find(player => player.id === this.myId);
+    goToRoom(players: PlayerObject[]) {
+        const roomId = window.location.hash.substr(1);
+        const myId = channel.peer.id;
+        const me = players.find(player => player.id === myId);
         if (!me) {
             console.error("Your ID couldn't be found within the room's player list.");
             return;

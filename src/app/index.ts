@@ -1,6 +1,6 @@
 import {Stage} from "./phase/stage";
 import {LoadingPhase} from "./phase/loadingPhase";
-import {Channel} from "./channel";
+import {Channel} from "./network/channel";
 import * as PIXI from "pixi.js";
 
 import {LoginPhase} from "./phase/loginPhase";
@@ -26,22 +26,6 @@ export let channel: Channel;
 // Main
 export const stage = new Stage("main");
 
-async function wsConnect(url: string): Promise<WebSocket> {
-    return new Promise((resolve, reject) => {
-        const socket = new WebSocket(url);
-
-        socket.onopen = () => {
-            console.log("Connection opened");
-            resolve(socket);
-        };
-
-        socket.onclose = () => {
-            console.error("Connection closed");
-            reject();
-        };
-    });
-}
-
 (async function () {
     app = new PIXI.Application({
         resizeTo: window,
@@ -57,8 +41,17 @@ async function wsConnect(url: string): Promise<WebSocket> {
 
     await AssetsLoader.load();
 
-    const socket = await wsConnect(process.env.WS_URL);
-    channel = new Channel(socket);
+    channel = new Channel(window.location.hash.substr(1));
 
     stage.setPhase(new LoginPhase());
+
+    window.onhashchange = function (e: HashChangeEvent) {
+        console.log("Hash change" + e.newURL);
+
+        if (!window.location.hash) {
+            channel.masterReset();
+        } else {
+            channel.resetToRoom(window.location.hash.substr(2));
+        }
+    }
 })();

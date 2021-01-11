@@ -36,7 +36,7 @@ export class PawnPlaceManager {
         }
     }
 
-    onPawnMove(event: PIXI.interaction.InteractionEvent) {
+    onPawnMove(event: PIXI.InteractionEvent) {
         if (this.phase.me.isMyRound() && this.pawn !== undefined) {
             const cursor = event.data.getLocalPosition(this.phase.board, null, event.data.global);
             this.pawn.setPosition(cursor.x, cursor.y);

@@ -1,15 +1,7 @@
 import {Phase} from "./phase";
 import {app, channel, stage, windowEventEmitter} from "../index";
 import * as PIXI from "pixi.js";
-import {
-    EndGameAck,
-    NextRound,
-    PlayerDraw,
-    PlayerLeft,
-    PlayerPlaceCard,
-    PlayerPlaceCardPreview,
-    RandomSeed
-} from "../protocol/game";
+import {EndGame, NextRound, PlayerDraw, PlayerPlaceCard, PlayerPlaceCardPreview, RandomSeed} from "../protocol/game";
 import {Bag} from "../game/bag";
 import {Board} from "../game/board";
 import {CardTile} from "../game/cardTile";
@@ -24,6 +16,7 @@ import {CardPlaceAssistant} from "../game/particles/cardPlaceAssistant";
 import {RoomPhase} from "./roomPhase";
 import {PawnPlaceManager} from "../game/pawns/pawnPlaceManager";
 import {CardPreviewManager} from "../game/particles/cardPreviewManager";
+import {P2pConnection} from "../network/p2pConnection";
 
 export class GamePhase extends Phase {
     seed: number;
@@ -142,7 +135,7 @@ export class GamePhase extends Phase {
         console.error("Seed received but there was already another seed set.");
     }
 
-    onPlayerLeft(packet: PlayerLeft) {
+    onPlayerLeft(packet: EventPlayerLeft) {
         const left = this.playersById.get(packet.player);
         left.online = false;
 
@@ -150,6 +143,7 @@ export class GamePhase extends Phase {
             this.nextRound();
         }
 
+        // TODO: we can select a new host with a synchronized RNG
         if (packet.newHost !== undefined) {
             this.playersById.get(packet.newHost).details.isHost = true;
             if (packet.newHost == this.me.id && !this.seed) {
@@ -339,7 +333,7 @@ export class GamePhase extends Phase {
     }
 
     /** Function called when the cursor moves around the map. */
-    onCursorMove(event: PIXI.interaction.InteractionEvent) {
+    onCursorMove(event: PIXI.InteractionEvent) {
         //console.log("[Stage] onCursorMove");
         if (this.isMyRound()) {
             if (this.drawnCardSprite) {
@@ -351,12 +345,12 @@ export class GamePhase extends Phase {
         }
     }
 
-    onCursorDown(event: PIXI.interaction.InteractionEvent) {
+    onCursorDown(event: PIXI.InteractionEvent) {
         this.lastMouseDownTime = Date.now();
         this.lastMouseDownPos = event.data.global.clone();
     }
 
-    onCursorUp(event: PIXI.interaction.InteractionEvent) {
+    onCursorUp(event: PIXI.InteractionEvent) {
         if (this.lastMouseDownTime === undefined) return;
 
         let now = Date.now();
@@ -372,7 +366,7 @@ export class GamePhase extends Phase {
     }
 
     /** Function called when the cursor clicks. */
-    onCursorClick(event: PIXI.interaction.InteractionEvent) {
+    onCursorClick(event: PIXI.InteractionEvent) {
         if (this.drawnCard && this.isMyRound()) {
             let pos = event.data.getLocalPosition(this.board, null, event.data.global);
             this.board.containerCoordsToTileCoords(pos, pos);
@@ -381,14 +375,14 @@ export class GamePhase extends Phase {
     }
 
     /** Function called when the cursor clicks. */
-    onCursorRightClick(event: PIXI.interaction.InteractionEvent) {
+    onCursorRightClick(event: PIXI.InteractionEvent) {
         if (this.drawnCard && this.isMyRound()) {
             this.drawnCard.rotation = (this.drawnCard.rotation + 1) % 4;
             this.updateDrawnCardWithMouse(event)
         }
     }
 
-    updateDrawnCardWithMouse(event: PIXI.interaction.InteractionEvent) {
+    updateDrawnCardWithMouse(event: PIXI.InteractionEvent) {
         let pos = event.data.getLocalPosition(this.board, null, event.data.global);
         this.board.containerCoordsToTileCoords(pos, pos);
         this.drawnCardPreview.onUpdate(pos.x, pos.y, this.drawnCard.rotation);
@@ -486,6 +480,31 @@ export class GamePhase extends Phase {
         this.nextRound();
     }
 
+    onEndGamePacket(packet: EndGame) {
+        if (!this.playersById.get(packet.sender).details.isHost) {
+            console.warn("Player " + packet.sender + " tried to end the game");
+            return;
+        }
+        this.moveToNextStage();
+    }
+
+    onConnectionClose(conn: P2pConnection) {
+        let player = this.playersById.get(conn.getId());
+        if (player === undefined) return;
+
+        let pkt = {
+            type: "event_player_left",
+            player: conn.getId(),
+        } as EventPlayerLeft;
+
+        this.onPlayerLeft(pkt);
+    }
+
+    moveToNextStage() {
+        const players = Array.from(this.playersById.values(), (x) => x.details);
+        stage.setPhase(new RoomPhase(this.roomId, this.me.details, players));
+    }
+
 
     // ================================================================================================================================
     // After-place
@@ -566,12 +585,12 @@ export class GamePhase extends Phase {
                 if (--this.lobbyCountdown <= 0) {
                     clearInterval(handle);
 
-                    channel.send({
-                        "type": "end_game"
-                    }, true);
-                    channel.eventEmitter.once("special_end_game_ack", (packet: EndGameAck) => {
-                        stage.setPhase(new RoomPhase(this.roomId, this.me.details, packet.players));
-                    });
+                    if (this.me.details.isHost) {
+                        channel.send({
+                            type: "end_game",
+                        } as EndGame);
+                        this.moveToNextStage();
+                    }
                 }
                 this.vue.$forceUpdate();
 
@@ -629,6 +648,10 @@ export class GamePhase extends Phase {
         channel.eventEmitter.on("player_place_card_preview", this.onPlayerPlaceCardPreview, this);
         channel.eventEmitter.on("special_player_left", this.onPlayerLeft, this);
         channel.eventEmitter.on("next_round", this.onNextRoundPacket, this);
+        channel.eventEmitter.on("end_game", this.onEndGamePacket, this);
+        if (channel.isMaster) {
+            channel.eventEmitter.on('#connection_close', this.onConnectionClose, this);
+        }
 
         app.stage.on("mousemove", this.onCursorMove, this);
         app.stage.on("mousedown", this.onCursorDown, this);
@@ -660,6 +683,10 @@ export class GamePhase extends Phase {
         channel.eventEmitter.off("player_place_card_preview", this.onPlayerPlaceCardPreview, this);
         channel.eventEmitter.off("special_player_left", this.onPlayerLeft, this);
         channel.eventEmitter.off("next_round", this.onNextRoundPacket, this);
+        channel.eventEmitter.off("end_game", this.onEndGamePacket, this);
+        if (channel.isMaster) {
+            channel.eventEmitter.off('#connection_close', this.onConnectionClose, this);
+        }
 
         windowEventEmitter.off("wheel", this.onMouseWheel, this);
         windowEventEmitter.off("keydown", this.onScoreBoardKeyDown, this);

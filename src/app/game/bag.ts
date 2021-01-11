@@ -69,7 +69,7 @@ export class Bag {
     }
 
     static fromModality(gamePhase: GamePhase): Bag {
-        let cards = Bag.duplicateCards(ClassicalModality);
+        let cards = Bag.duplicateCards(ClassicalModality as any);
 
         let initialCard = Bag.findFirstInitialCard(cards);
         // Put the first card first
@@ -79,6 +79,7 @@ export class Bag {
     }
 
     static duplicateCards(original: Array<Card>): Array<Card> {
+        return original;
         let res = new Array<Card>();
         for (let card of original) {
             res.push(...Array(card.quantity).fill(card))

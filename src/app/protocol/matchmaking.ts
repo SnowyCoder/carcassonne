@@ -10,34 +10,6 @@ interface LoginResponse {
     type: "login_response",
     requestId: number,
     result: string,
-    playerId?: string,
-}
-
-interface RoomCreate {
-    id?: number,
-    type: "room_create",
-}
-
-interface RoomCreateResponse {
-    id: number,
-    type: "room_create_response",
-    requestId: number,
-    result: string,
-    players?: PlayerObject[],
-    inviteId?: string,
-}
-
-interface RoomJoin {
-    id?: string,
-    type: "room_join",
-    inviteId: string,
-}
-
-interface RoomJoinResponse {
-    id: number,
-    type: "room_join_response",
-    requestId: number,
-    result: string,
     players?: PlayerObject[]
 }
 
@@ -54,26 +26,18 @@ interface EventPlayerLeft {
     newHost?: string,
 }
 
-interface RoomStart {
+interface EventRoomStartRequest {
     id?: number,
-    type: "room_start",
-    connectionType: string, // fixed
-}
-
-interface RoomStartResponse {
-    id: number,
-    type: "room_start_response",
-    requestId: number,
-    result: string,
-}
-
-interface EventRoomStart {
-    id?: number,
-    type: "event_room_start",
+    type: "event_room_start_req",
 }
 
 interface EventRoomStartAck {
     id?: number,
     type: "event_room_start_ack",
     requestId: number
+}
+
+interface EventRoomStartConfirm {
+    id?: number,
+    type: "event_room_start_confirm",
 }

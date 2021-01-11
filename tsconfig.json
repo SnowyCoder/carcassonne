@@ -6,6 +6,7 @@
     //"strict": true,
     "target": "es6",
     "module": "es6",
+    "allowSyntheticDefaultImports": true,
     "downlevelIteration": true,
     "moduleResolution": "node",
     "experimentalDecorators": true,

@@ -1,6 +1,6 @@
 
 interface PlayerObject {
-    id?: string,
+    id?: string,// peerjs id
     username: string,
     color: number,
     avatar: number,

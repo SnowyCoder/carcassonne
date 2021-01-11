@@ -3,7 +3,7 @@ import {CardTile} from "./cardTile";
 import {Bag} from "./bag";
 import {Side, SideUtil} from "./side";
 import {CardConnector} from "./cardConnector";
-import InteractionEvent = PIXI.interaction.InteractionEvent;
+import InteractionEvent = PIXI.InteractionEvent;
 import {Card} from "./card";
 import {GamePhase} from "../phase/gamePhase";
 import {TileDB, TilePlacement} from "./tileDB";
