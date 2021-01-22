@@ -79,7 +79,7 @@ export class Bag {
     }
 
     static duplicateCards(original: Array<Card>): Array<Card> {
-        return original;
+        //return original;
         let res = new Array<Card>();
         for (let card of original) {
             res.push(...Array(card.quantity).fill(card))
